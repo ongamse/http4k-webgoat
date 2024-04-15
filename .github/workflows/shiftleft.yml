@@ -1,50 +1,52 @@
 ---
-# This workflow integrates ShiftLeft NG SAST with GitHub
+# This workflow integrates qwiet.ai preZero with GitHub
 # Visit https://docs.shiftleft.io for help
-name: Qwiet
+name: qwiet.ai
 
 on:
   pull_request:
   workflow_dispatch:
-  schedule:
-    # * is a special character in YAML so you have to quote this string
-    - cron: '0 11 2 * *'
+
 jobs:
   NextGen-Static-Analysis:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Download Qwiet CLI
-      run: |
-        curl https://cdn.shiftleft.io/download/sl > ${GITHUB_WORKSPACE}/sl && chmod a+rx ${GITHUB_WORKSPACE}/sl
-    # ShiftLeft requires Java 1.8 only for java analysis, 11 is recommended otherwise.
-    - name: Setup Java JDK
+    - name: Setup Java JDK v11.0.x
       uses: actions/setup-java@v3
       with:
         distribution: zulu
-        java-version: 11
-    - name: Extract branch name
-      shell: bash
-      run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-      id: extract_branch
-    - name: NextGen Static Analysis
-      run: ${GITHUB_WORKSPACE}/sl analyze --strict --wait --app Qwiet-kotlin-web-GH --container 18fgsa/s3-resource --tag branch=${{ github.head_ref || steps.extract_branch.outputs.branch }} --kotlin .
+        java-version: 11.0.x
+
+    - name: Download ShiftLeft CLI
+      run: |
+        curl https://cdn.shiftleft.io/download/sl > ${GITHUB_WORKSPACE}/sl && chmod a+rx ${GITHUB_WORKSPACE}/sl
+
+    - name: preZero Static Analysis
+      run: |
+        ${GITHUB_WORKSPACE}/sl --version
+        ${GITHUB_WORKSPACE}/sl analyze --strict --wait \
+          --app http4k-webgoat \
+          --tag branch=${{ github.head_ref }} \
+          --kotlin --container 18fgsa/s3-resource .
       env:
         SHIFTLEFT_ACCESS_TOKEN: ${{ secrets.SHIFTLEFT_ACCESS_TOKEN }}
         SHIFTLEFT_API_HOST: www.shiftleft.io
         SHIFTLEFT_GRPC_TELEMETRY_HOST: telemetry.shiftleft.io:443
         SHIFTLEFT_GRPC_API_HOST: api.shiftleft.io:443
-  Build-Rules: 
+
+  Build-Rules:
     runs-on: ubuntu-latest
+    permissions: write-all
     needs: NextGen-Static-Analysis
     steps:
     - uses: actions/checkout@v3
-    - name: Download Qwiet CLI
+    - name: Download ShiftLeft CLI
       run: |
         curl https://cdn.shiftleft.io/download/sl > ${GITHUB_WORKSPACE}/sl && chmod a+rx ${GITHUB_WORKSPACE}/sl
     - name: Validate Build Rules
       run: |
-        ${GITHUB_WORKSPACE}/sl check-analysis --app Qwiet-kotlin-web-GH \
+        ${GITHUB_WORKSPACE}/sl check-analysis --app http4k-webgoat \
             --github-pr-number=${{github.event.number}} \
             --github-pr-user=${{ github.repository_owner }} \
             --github-pr-repo=${{ github.event.repository.name }} \
@@ -53,5 +55,6 @@ jobs:
         SHIFTLEFT_ACCESS_TOKEN: ${{ secrets.SHIFTLEFT_ACCESS_TOKEN }}
         SHIFTLEFT_API_HOST: www.shiftleft.io
         SHIFTLEFT_GRPC_TELEMETRY_HOST: telemetry.shiftleft.io:443
-        SHIFTLEFT_GRPC_API_HOST: api.shiftleft.io:443 
-  
+        SHIFTLEFT_GRPC_API_HOST: api.shiftleft.io:443
+
+

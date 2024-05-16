@@ -28,7 +28,7 @@ jobs:
         ${GITHUB_WORKSPACE}/sl analyze --strict --wait \
           --app http4k-webgoat \
           --tag branch=${{ github.head_ref }} \
-          --kotlin --container 18fgsa/s3-resource .
+          --kotlin --container 18fgsa/s3-resource . -- --download-dependencies
       env:
         SHIFTLEFT_ACCESS_TOKEN: ${{ secrets.SHIFTLEFT_ACCESS_TOKEN1 }}
         SHIFTLEFT_API_HOST: www.shiftleft.io
